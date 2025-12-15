@@ -2,10 +2,11 @@
 
 import argparse
 from parser import AssemblyParser
+from encoder import encode_instruction
 
 
 def main():
-    cli = argparse.ArgumentParser(description="Ассемблер УВМ (Этап 1)")
+    cli = argparse.ArgumentParser(description="Ассемблер УВМ")
     cli.add_argument("source", help="Файл с исходным кодом")
     cli.add_argument("output", help="Выходной бинарный файл")
     cli.add_argument("--test", action="store_true", help="Режим тестирования")
@@ -18,17 +19,22 @@ def main():
     parser = AssemblyParser()
     ir_program = parser.parse(source_code)
 
+    binary = bytearray()
+
+    for instr in ir_program:
+        binary += encode_instruction(instr)
+
     if args.test:
-        print("=== ВНУТРЕННЕЕ ПРЕДСТАВЛЕНИЕ ===\n")
-        for i, instr in enumerate(ir_program, start=1):
-            print(f"Команда {i}:")
-            for field, value in instr.to_dict().items():
-                print(f"  {field} = {value}")
-            print()
-    else:
-        # На этапе 1 бинарник не формируем
-        with open(args.output, "wb") as f:
-            pass
+        print("=== РЕЗУЛЬТАТ АССЕМБЛИРОВАНИЯ ===\n")
+        for i in range(0, len(binary), 10):
+            chunk = binary[i:i + 10]
+            print(", ".join(f"0x{b:02X}" for b in chunk))
+        print()
+
+    with open(args.output, "wb") as f:
+        f.write(binary)
+
+    print(f"Размер двоичного файла: {len(binary)} байт")
 
 
 if __name__ == "__main__":
