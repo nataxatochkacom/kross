@@ -34,8 +34,8 @@ class UVMInterpreter:
             self.memory[target] = self.memory[instr.B]
 
         elif instr.name == "SHR":
-            value = self.memory[instr.D]
             shift = self.memory[instr.B]
+            value = self.memory[instr.D]
             self.memory[instr.C] = value >> shift
 
 
