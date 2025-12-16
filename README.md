@@ -248,3 +248,41 @@ python interpreter.py shr_test.bin dump.csv 10:15
  python assembler.py vector_shr_1.asm v1.bin
  python interpreter.py v1.bin dump1.csv 95:120
 ```
+
+## Этап 6. Написание GUI для различных платформ
+
+Этап 6 посвящён созданию кроссплатформенной версии УВМ (Учебной виртуальной машины) с графическим интерфейсом и поддержкой следующих платформ:
+
+Windows
+
+Linux
+
+Web / WASM (браузер)
+
+Основные функции GUI:
+
+Редактируемое окно программы на языке ассемблера
+
+Кнопка «Ассемблировать и запустить»
+
+Окно вывода дампа памяти
+
+Для запуска интерпретатора на Linux/Windows:
+
+```asm
+python gui_main.py
+```
+
+Для запуска интерпретатора в Web/WASM:
+```asm
+python3 -m http.server
+http://localhost:8000
+```
+
+Для запуска скрипта:
+```asm
+ python build.py desktop/web
+```
+После создания папки dist откройте файл gui_main, если используете Linux/Windows
+
+Для версии web/wasm следуйте шагам в консоли

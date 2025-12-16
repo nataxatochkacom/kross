@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>УВМ — Web / WASM</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+</head>
+<body>
+<h2>УВМ — Web / WASM</h2>
+
+<textarea id="code" rows="10" cols="80">
+LOAD_CONST 0, 10
+LOAD_CONST 1, 5
+WRITE_MEM 1, 0
+</textarea><br><br>
+
+<button onclick="run()">Ассемблировать и запустить</button>
+<pre id="output"></pre>
+
+<script>
+let pyodideReady = loadPyodide({
+  indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
+});
+
+async function run() {
+  const pyodide = await pyodideReady;
+  const output = document.getElementById("output");
+  output.textContent = "Загрузка...";
+
+  try {
+    const source = document.getElementById("code").value;
+
+    // Загружаем каждый файл и добавляем его в Python как модуль
+    const modules = {
+      "instructions.py": await fetch("instructions.py").then(r => r.text()),
+      "ir.py": await fetch("ir.py").then(r => r.text()),
+      "parser.py": await fetch("parser.py").then(r => r.text()),
+      "encoder.py": await fetch("encoder.py").then(r => r.text()),
+      "decoder.py": await fetch("decoder.py").then(r => r.text()),
+      "interpreter.py": await fetch("interpreter.py").then(r => r.text()),
+      "assembler.py": await fetch("assembler.py").then(r => r.text())
+    };
+
+    // Создаем Python код, который определяет все модули
+    let pythonSetup = `
+import sys
+import importlib.util
+
+# Создаем модули из строк
+`;
+
+    for (const [moduleName, moduleCode] of Object.entries(modules)) {
+      const name = moduleName.replace('.py', '');
+      pythonSetup += `
+# Создаем модуль ${name}
+spec_${name} = importlib.util.spec_from_loader("${name}", loader=None)
+module_${name} = importlib.util.module_from_spec(spec_${name})
+sys.modules["${name}"] = module_${name}
+
+# Выполняем код модуля
+exec("""${moduleCode.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}""", module_${name}.__dict__)
+print("✓ Модуль ${name} загружен")
+`;
+    }
+
+    pythonSetup += `
+print("Все модули загружены")
+print("=" * 50)
+
+# Теперь можем импортировать как обычно
+from parser import AssemblyParser
+from encoder import encode_instruction
+from interpreter import UVMInterpreter
+
+source = """${source.replace(/"/g, '\\"')}"""
+
+print("Исходный код:")
+print(source)
+print()
+
+# Парсим
+parser = AssemblyParser()
+ir = parser.parse(source)
+print(f"Спарсено инструкций: {len(ir)}")
+
+# Кодируем
+binary = bytearray()
+for i, instr in enumerate(ir):
+    encoded = encode_instruction(instr)
+    binary += encoded
+    print(f"  [{i}] {instr} -> {list(encoded)}")
+
+print(f"\\nРазмер байткода: {len(binary)} байт")
+print("=" * 50)
+
+# Запускаем
+vm = UVMInterpreter()
+vm.load_program(binary)
+print("Запуск виртуальной машины...")
+vm.run()
+
+print("\\nПервые 20 ячеек памяти:")
+result_lines = []
+for i in range(500):
+    result_lines.append(f"  [{i:2}] = {vm.memory[i]}")
+
+"\\n".join(result_lines)
+`;
+
+    const result = await pyodide.runPythonAsync(pythonSetup);
+    output.textContent = result;
+
+  } catch(e) {
+    console.error("Ошибка выполнения:", e);
+    output.textContent = "Ошибка:\\n" + e.toString();
+  }
+}
+</script>
+</body>
+</html>
